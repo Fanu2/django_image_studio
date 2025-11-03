@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Image</title>
+    <style>
+        :root {
+            --primary-color: #3366cc;
+            --primary-dark: #254b8a;
+            --bg-light: #f5f8fd;
+            --card-bg: #ffffff;
+            --text-dark: #2c3e50;
+            --text-light: #555;
+            --border: #d0d7e2;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-light), #e4ebf5);
+            text-align: center;
+            margin: 0;
+            padding: 50px 20px;
+        }
+
+        h1 {
+            color: var(--text-dark);
+            margin-bottom: 25px;
+            font-size: 30px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+
+        form {
+            display: inline-block;
+            background: var(--card-bg);
+            padding: 40px 50px;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            text-align: left;
+            width: 380px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        form:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-top: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 4px rgba(51, 102, 204, 0.4);
+            outline: none;
+        }
+
+        /* Custom File Upload */
+        .file-upload {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .file-upload input[type="file"] {
+            width: 100%;
+            height: 44px;
+            opacity: 0;
+            position: absolute;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f4fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            height: 44px;
+            color: var(--text-light);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-label:hover {
+            background: #e6ecf8;
+            border-color: var(--primary-color);
+            color: var(--primary-dark);
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            margin-top: 25px;
+            padding: 12px;
+            border: none;
+            background: var(--primary-color);
+            color: #fff;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 12px rgba(51, 102, 204, 0.3);
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 75, 138, 0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 25px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .note {
+            font-size: 13px;
+            color: #777;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload a New Image</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <label for="id_title">Image Title</label>
+        <input type="text" name="title" id="id_title" placeholder="Enter a short title or description" required>
+
+        <label for="id_original">Choose Image File</label>
+        <div class="file-upload">
+            <label class="file-upload-label" for="id_original">📁 Click to choose an image...</label>
+            <input type="file" name="original" id="id_original" accept="image/*" required>
+        </div>
+        <p class="note">Supported formats: JPG, PNG, WEBP, etc.</p>
+
+        <button type="submit">Upload</button>
+    </form>
+
+    <p><a class="back-link" href="{% url 'images:gallery' %}">← Back to Gallery</a></p>
+
+    <script>
+        // Show selected file name dynamically
+        const fileInput = document.getElementById("id_original");
+        const fileLabel = document.querySelector(".file-upload-label");
+        fileInput.addEventListener("change", (e) => {
+            const fileName = e.target.files[0]?.name || "📁 Click to choose an image...";
+            fileLabel.textContent = fileName;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+
+{% extends 'images/base.html' %}
+{% load widget_tweaks %}
+{% block content %}
+  <div class="grid grid-cols-2 gap-6">
+    <div>
+      <img src="{{ item.versions.first.image.url if item.versions.count>0 else item.original.url }}" alt="{{ item.title }}" class="w-full rounded shadow">
+      <h3 class="mt-4 text-sm text-gray-600">Versions</h3>
+      <ul class="mt-2 space-y-2">
+        {% for v in versions %}
+          <li class="flex items-center gap-2">
+            <img src="{{ v.image.url }}" class="w-24 h-16 object-cover rounded"/>
+            <div class="flex-1">
+              <div class="text-sm">{{ v.note }}</div>
+              <div class="text-xs text-gray-500">{{ v.created_at }}</div>
+            </div>
+            <a href="{{ v.image.url }}" download class="px-2 py-1 border rounded text-sm">Download</a>
+          </li>
+        {% empty %}<li>No versions yet.</li>{% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h2 class="text-xl">{{ item.title }}</h2>
+      <form method="post" class="bg-white p-4 rounded shadow mt-4">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% for field in form %}
+          <div class="mb-2">
+            {{ field.label_tag }}<br/>
+            {% render_field field class="border p-2 w-full" %}
+            {% if field.help_text %}<div class="text-xs text-gray-400">{{ field.help_text }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <div class="flex gap-2">
+          <button class="px-3 py-2 bg-indigo-600 text-white rounded">Apply</button>
+          <a href="{{ item.original.url }}" download class="px-3 py-2 bg-gray-200 rounded">Download Original</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

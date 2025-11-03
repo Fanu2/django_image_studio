@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="page-title">🎨 Image Manipulation Studio</h2>
+
+<!-- === IMAGE COMPARISON SECTION === -->
+<div class="compare-container">
+  <div class="compare-tabs">
+    <button id="showOriginal" class="tab active">Original</button>
+    <button id="showPreview" class="tab">Live Preview</button>
+    <button id="showModified" class="tab">Saved Version</button>
+  </div>
+
+  <div class="compare-views">
+    <img id="originalImage" src="{{ image.original.url }}" class="compare-img active">
+    <img id="previewImage" src="{{ image.original.url }}" class="compare-img">
+    {% if image.versions.first %}
+      <img id="modifiedImage" src="{{ image.versions.first.image.url }}" class="compare-img">
+    {% else %}
+      <img id="modifiedImage" src="" class="compare-img hidden">
+    {% endif %}
+  </div>
+</div>
+
+<!-- === FILTER + EFFECT FORM === -->
+<form method="POST" enctype="multipart/form-data" class="manip-form" id="manipForm">
+  {% csrf_token %}
+  <div class="form-controls">
+    <div class="slider-group">
+      <label>Brightness: <span id="brightnessValue">100</span>%</label>
+      <input type="range" id="brightness" name="brightness" min="0" max="200" value="100">
+    </div>
+    <div class="slider-group">
+      <label>Contrast: <span id="contrastValue">100</span>%</label>
+      <input type="range" id="contrast" name="contrast" min="0" max="200" value="100">
+    </div>
+    <div class="slider-group">
+      <label>Saturation: <span id="saturateValue">100</span>%</label>
+      <input type="range" id="saturate" name="saturate" min="0" max="200" value="100">
+    </div>
+    <div class="slider-group">
+      <label>Rotate: <span id="rotateValue">0</span>°</label>
+      <input type="range" id="rotate" name="rotate" min="0" max="360" value="0">
+    </div>
+    <div class="slider-group">
+      <label>Blur: <span id="blurValue">0</span>px</label>
+      <input type="range" id="blur" name="blur" min="0" max="10" value="0">
+    </div>
+    <div class="slider-group">
+      <label>Opacity: <span id="opacityValue">100</span>%</label>
+      <input type="range" id="opacity" name="opacity" min="0" max="100" value="100">
+    </div>
+
+    <!-- === NEW GEOMETRY CONTROLS === -->
+    <div class="geometry-section">
+      <h4 style="margin-top:20px;">🧩 Geometry Adjustments</h4>
+      <div class="geometry-group">
+        <label>Resize (Width × Height):</label>
+        <input type="number" name="resize_width" placeholder="Width" min="1" style="width:80px;">
+        <input type="number" name="resize_height" placeholder="Height" min="1" style="width:80px;">
+      </div>
+
+      <div class="geometry-group">
+        <label for="crop">Crop (e.g. 200x200+10+10):</label>
+        <input type="text" id="crop" name="crop" placeholder="WxH+X+Y">
+      </div>
+
+      <div class="geometry-group">
+        <label><input type="checkbox" name="trim"> Trim edges</label>
+        <label><input type="checkbox" name="deskew"> Deskew image</label>
+      </div>
+    </div>
+    <!-- === END GEOMETRY === -->
+
+    <div class="effect-group">
+      <label for="effect">Effect:</label>
+      <select id="effect" name="effect">
+        <option value="none">None</option>
+        <option value="grayscale">Grayscale</option>
+        <option value="sepia">Sepia</option>
+        <option value="invert">Invert</option>
+        <option value="sharpen">Sharpen</option>
+        <option value="emboss">Emboss</option>
+        <option value="edge">Edge Enhance</option>
+        <option value="oilpaint">Oil Paint</option>
+        <option value="charcoal">Charcoal</option>
+        <option value="sketch">Sketch</option>
+        <option value="solarize">Solarize</option>
+        <option value="hue_rotate">Hue Rotate</option>
+        <option value="posterize">Posterize</option>
+        <option value="noise">Add Noise</option>
+        <option value="mirror">Mirror</option>
+        <option value="flip">Flip</option>
+        <option value="rotate_left">Rotate Left</option>
+        <option value="rotate_right">Rotate Right</option>
+        <option value="frame">Add Frame</option>
+        <option value="border">Add Border</option>
+        <option value="shadow">Add Shadow</option>
+        <option value="vignette">Vignette</option>
+        <option value="cartoon">Cartoonize</option>
+        <option value="glow">Glow</option>
+      </select>
+    </div>
+
+    <div class="note-group">
+      <label for="note">Save Note (optional):</label>
+      <input type="text" id="note" name="note" placeholder="Describe this version (e.g., 'Sepia + glow')">
+    </div>
+  </div>
+
+  <div class="form-buttons">
+    <button type="submit" class="save-btn">💾 Save Version</button>
+    <button type="button" id="resetBtn" class="reset-btn">🔄 Reset</button>
+  </div>
+</form>
+
+<!-- === GALLERY OF SAVED VERSIONS === -->
+{% if processed_versions %}
+<h3 style="text-align:center;">Saved Versions</h3>
+<ul id="processed-list">
+  {% for version in processed_versions %}
+    <li>
+      <img src="{{ version.image.url }}" class="thumbnail" data-full="{{ version.image.url }}" alt="{{ version.note }}">
+      <small>{{ version.note }}</small>
+    </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- === FULLSCREEN ZOOM VIEWER === -->
+<div id="zoomOverlay" class="zoom-overlay hidden">
+  <span id="closeZoom" class="zoom-close">&times;</span>
+  <img id="zoomedImage" src="" class="zoomed-img" alt="Zoomed view">
+  <a id="zoomDownload" href="#" download class="zoom-download">⬇️ Download</a>
+  <span id="prevBtn" class="zoom-nav prev">&#10094;</span>
+  <span id="nextBtn" class="zoom-nav next">&#10095;</span>
+</div>
+
+<style>
+body {
+  background: linear-gradient(135deg, #eef3f9, #dfe7f0);
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #333;
+}
+.page-title { text-align:center; margin:25px 0; font-size:28px; }
+.compare-container { text-align:center; margin:20px auto 40px; background:#fff; padding:25px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); width:90%; }
+.compare-tabs { display:flex; justify-content:center; gap:10px; margin-bottom:20px; }
+.tab { background:#e3e8f1; border:none; padding:10px 20px; cursor:pointer; border-radius:8px; font-weight:600; transition:all 0.3s ease; }
+.tab.active { background:#3366cc; color:white; }
+.compare-img { max-width:90%; display:none; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.4s ease, filter 0.3s ease; }
+.compare-img.active { display:inline-block; }
+.manip-form { width:85%; max-width:750px; margin:0 auto 50px; background:#fff; padding:30px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+.slider-group { margin:15px 0; }
+.slider-group label { display:flex; justify-content:space-between; }
+.slider-group input[type=range] { width:100%; accent-color:#3366cc; }
+.effect-group, .note-group, .geometry-group { margin-top:20px; }
+.effect-group select, .note-group input { width:100%; padding:8px; border-radius:8px; border:1px solid #ccc; }
+.form-buttons { text-align:center; margin-top:30px; }
+.save-btn, .reset-btn { padding:12px 25px; margin:0 10px; border:none; border-radius:10px; font-size:16px; cursor:pointer; }
+.save-btn { background-color:#3366cc; color:white; }
+.reset-btn { background-color:#f39c12; color:white; }
+.geometry-section h4 { color:#444; margin-bottom:10px; }
+
+/* Gallery Thumbnails */
+#processed-list { display:flex; flex-wrap:wrap; justify-content:center; list-style:none; gap:10px; }
+.thumbnail { border-radius:8px; cursor:pointer; transition:transform 0.2s ease; width:120px; height:120px; object-fit:cover; box-shadow:0 2px 4px rgba(0,0,0,0.2); }
+.thumbnail:hover { transform:scale(1.05); }
+
+/* Fullscreen Zoom */
+.zoom-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.9); display:flex; justify-content:center; align-items:center; z-index:9999; flex-direction:column; }
+.zoom-overlay.hidden { display:none; }
+.zoomed-img { max-width:90%; max-height:85%; border-radius:12px; box-shadow:0 0 20px rgba(255,255,255,0.4); }
+.zoom-close { position:absolute; top:20px; right:30px; font-size:40px; color:white; cursor:pointer; }
+.zoom-nav { position:absolute; top:50%; font-size:50px; color:white; cursor:pointer; }
+.zoom-nav.prev { left:40px; } .zoom-nav.next { right:40px; }
+.zoom-download { position:absolute; bottom:25px; color:#fff; background:#28a745; padding:10px 20px; border-radius:8px; text-decoration:none; }
+</style>
+
+<script>
+// === Tabs Logic ===
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.compare-img').forEach(i=>i.classList.remove('active'));
+    tab.classList.add('active');
+    if(tab.id==='showOriginal') document.getElementById('originalImage').classList.add('active');
+    if(tab.id==='showPreview') document.getElementById('previewImage').classList.add('active');
+    if(tab.id==='showModified') document.getElementById('modifiedImage').classList.add('active');
+  });
+});
+
+// === Live Preview Filters ===
+const controls = ['brightness','contrast','saturate','rotate','blur','opacity','effect'];
+const els = Object.fromEntries(controls.map(id=>[id,document.getElementById(id)]));
+function updatePreview(){
+  const {brightness,contrast,saturate,rotate,blur,opacity,effect}=els;
+  const preview=document.getElementById('previewImage');
+  preview.style.filter=`brightness(${brightness.value}%) contrast(${contrast.value}%) saturate(${saturate.value}%) blur(${blur.value}px) opacity(${opacity.value}%) ${effect.value==='grayscale'?'grayscale(100%)':''} ${effect.value==='sepia'?'sepia(100%)':''} ${effect.value==='invert'?'invert(100%)':''}`;
+  preview.style.transform=`rotate(${rotate.value}deg)`;
+  document.getElementById('brightnessValue').innerText=brightness.value;
+  document.getElementById('contrastValue').innerText=contrast.value;
+  document.getElementById('saturateValue').innerText=saturate.value;
+  document.getElementById('rotateValue').innerText=rotate.value;
+  document.getElementById('blurValue').innerText=blur.value;
+  document.getElementById('opacityValue').innerText=opacity.value;
+}
+Object.values(els).forEach(el=>el.addEventListener('input',updatePreview));
+document.getElementById('resetBtn').addEventListener('click',()=>{Object.entries({brightness:100,contrast:100,saturate:100,rotate:0,blur:0,opacity:100,effect:'none'}).forEach(([k,v])=>els[k].value=v);updatePreview();});
+
+// === Fullscreen Gallery ===
+const thumbnails = Array.from(document.querySelectorAll('.thumbnail'));
+const overlay=document.getElementById('zoomOverlay'), zoomed=document.getElementById('zoomedImage'), download=document.getElementById('zoomDownload');
+let idx=-1;
+
+function preload(i){if(thumbnails[i]){const img=new Image();img.src=thumbnails[i].dataset.full;}}
+function openZoom(i){if(i<0||i>=thumbnails.length)return;idx=i;const src=thumbnails[idx].dataset.full;zoomed.src=src;download.href=src;overlay.classList.remove('hidden');document.body.style.overflow='hidden';preload(idx-1);preload(idx+1);}
+function closeZoom(){overlay.classList.add('hidden');document.body.style.overflow='';}
+function nextImg(){openZoom((idx+1)%thumbnails.length);}
+function prevImg(){openZoom((idx-1+thumbnails.length)%thumbnails.length);}
+
+thumbnails.forEach((t,i)=>t.addEventListener('click',()=>openZoom(i)));
+document.getElementById('closeZoom').addEventListener('click',closeZoom);
+document.getElementById('nextBtn').addEventListener('click',nextImg);
+document.getElementById('prevBtn').addEventListener('click',prevImg);
+document.addEventListener('keydown',e=>{if(overlay.classList.contains('hidden'))return;if(e.key==='Escape')closeZoom();if(e.key==='ArrowRight')nextImg();if(e.key==='ArrowLeft')prevImg();});
+</script>
+{% endblock %}
